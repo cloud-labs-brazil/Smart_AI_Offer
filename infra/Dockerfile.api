@@ -1,0 +1,29 @@
+# Smart Offer — Backend Dockerfile
+# FastAPI + Uvicorn on Python 3.12
+# @see .claude/rules/07-quality-security-devops.md (non-root user)
+
+FROM python:3.12-slim AS base
+
+# Security: non-root user
+RUN groupadd --gid 1001 appuser && \
+    useradd --uid 1001 --gid 1001 --create-home appuser
+
+WORKDIR /app/apps/api
+
+# Install dependencies
+COPY apps/api/requirements.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY apps/api /app/apps/api
+COPY services /app/services
+
+ENV PYTHONPATH=/app/apps/api:/app
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

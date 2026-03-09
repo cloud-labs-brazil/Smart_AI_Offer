@@ -1,0 +1,55 @@
+# Smart Offer — .gitignore
+# @see docs/monorepo-structure.md
+
+# ──── Dependencies ────────────────────────────────
+node_modules/
+__pycache__/
+*.pyc
+.pyo
+*.egg-info/
+dist/
+
+# ──── Build Artifacts ─────────────────────────────
+.next/
+out/
+build/
+*.js.map
+
+# ──── Environment ─────────────────────────────────
+.env
+.env.local
+.env.production
+!infra/.env.example
+
+# ──── IDE ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ──── OS Files ────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ──── Docker ──────────────────────────────────────
+*.log
+
+# ──── Python virtualenvs ──────────────────────────
+venv/
+.venv/
+env/
+
+# ──── Coverage ────────────────────────────────────
+coverage/
+htmlcov/
+.coverage
+*.lcov
+
+# ──── Misc ────────────────────────────────────────
+*.bak
+*.tmp
+
+# ---- Data Files ------------------------------
+*.csv

@@ -1,0 +1,53 @@
+/* Smart Offer — Global Styles
+ * Theme-driven via CSS variables injected by ThemeProvider
+ * @see .claude/rules/06-ui-ux-indra-design-system.md
+ */
+
+@import "tailwindcss";
+
+:root {
+  /* Default theme: McKinsey Minimal — overridden by ThemeProvider */
+  --color-bg: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-primary: #1e293b;
+  --color-accent: #3b82f6;
+  --color-border: #e2e8f0;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-success: #22c55e;
+
+  --chart-0: #3b82f6;
+  --chart-1: #8b5cf6;
+  --chart-2: #06b6d4;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #22c55e;
+
+  --font-family: "Inter", system-ui, sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --letter-spacing: -0.01em;
+
+  --card-padding: 1.5rem;
+  --grid-gap: 1.5rem;
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-normal);
+  letter-spacing: var(--letter-spacing);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
