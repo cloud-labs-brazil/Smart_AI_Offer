@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useOfferStore } from "../../stores/useOfferStore";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 const COLORS = [
     "var(--chart-0)", "var(--chart-1)", "var(--chart-2)",
@@ -18,8 +19,8 @@ export function PracticeAnalytics() {
         const practiceMap = new Map<string, { count: number; revenue: number }>();
 
         for (const offer of offers) {
-            const practice = (offer as any).practice ?? (offer as any).practice ?? "Unknown";
-            const amount = (offer as any).total_amount ?? (offer as any).totalAmount ?? 0;
+            const practice = offer.practice ?? "Unknown";
+            const amount = offer.totalAmount ?? 0;
             const entry = practiceMap.get(practice) || { count: 0, revenue: 0 };
             entry.count += 1;
             entry.revenue += amount;
@@ -51,6 +52,14 @@ export function PracticeAnalytics() {
                 Practice Analytics — Revenue Share
             </h2>
 
+            <DashboardInfo title="Understanding Practice Analytics">
+                <p><strong>What it shows:</strong> A breakdown of your offer pipeline by service practice, showing both the number of offers and the total revenue for each practice area.</p>
+                <p><strong>Donut chart:</strong> Each colored slice represents a practice. Larger slices indicate practices with more revenue in the pipeline. The center of the donut is left empty to emphasize proportion over absolute values.</p>
+                <p><strong>Revenue table:</strong> The companion table on the right lists every practice with its offer count, total revenue (€), and percentage share of the total pipeline. This gives you exact numbers behind the visual distribution.</p>
+                <p><strong>How to use it:</strong> Compare this view with the Financial Exposure tab. A practice with many small offers (high count, low revenue) tells a different story from one with few large offers (low count, high revenue). Use this to assess which practices generate the most value per offer and where to focus business development efforts.</p>
+                <p><strong>Data source:</strong> Practice names are sourced from the Jira &quot;Custom field (Type of Service)&quot; field, which reflects the actual service classification assigned to each offer in your project management tool.</p>
+            </DashboardInfo>
+
             <div className="flex flex-col lg:flex-row gap-6 flex-1 w-full">
                 {/* Donut Chart */}
                 <div className="flex-1 min-h-[350px]">
@@ -79,7 +88,7 @@ export function PracticeAnalytics() {
                                     borderRadius: "var(--radius-card)",
                                     color: "var(--color-text)",
                                 }}
-                                formatter={(value: number) => [`€${(value / 1000000).toFixed(2)}M`, "Revenue"]}
+                                formatter={(value) => [`€${(Number(value) / 1000000).toFixed(2)}M`, "Revenue"]}
                             />
                             <Legend verticalAlign="bottom" height={36} />
                         </PieChart>

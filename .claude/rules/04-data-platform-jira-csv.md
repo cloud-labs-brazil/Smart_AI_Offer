@@ -22,8 +22,8 @@
 | 3 | `Assignee` | assignee / owner | string | ✅ | Lead architect (Jira login) |
 | 4 | `Status` | status | string | ✅ | Workflow status |
 | 5 | `Summary` | summary | string | ✅ | Offer title |
-| 6 | `Custom field (Type of Service)` | typeOfService | string | ☐ | Service classification |
-| 7 | `Component/s` | practice | string | ☐ | Business practice / DN |
+| 6 | `Custom field (Type of Service)` | typeOfService + practice | string | ☐ | Canonical service practice classification |
+| 7 | `Component/s` | component (context) | string | ☐ | Client/account label (contextual field, not used as practice) |
 | 8 | `Custom field (Offering Type)` | offeringType | string | ☐ | Offering classification |
 | 9 | `Priority` | priority | string | ☐ | Jira priority level |
 | 10 | `Custom field (Total amount (€) weighted)` | weightedAmount | number | ☐ | Revenue × probability |

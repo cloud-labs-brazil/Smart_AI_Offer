@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { useOfferStore } from "../../stores/useOfferStore";
 import { motion } from "motion/react";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 function getAllocColor(value: number): string {
     if (value <= 0) return "var(--color-bg)";
@@ -28,21 +29,15 @@ export function AllocationHeatmap() {
         const grid = new Map<string, { value: number; overloaded: boolean; details: { offerId: string; role: string; weight: number }[] }>();
 
         for (const alloc of allocations) {
-            const name = (alloc as any).architect_name ?? (alloc as any).architectName ?? "";
-            const date = (alloc as any).date ?? "";
-            const total = (alloc as any).total_allocation ?? (alloc as any).totalAllocation ?? 0;
-            const overloaded = (alloc as any).is_overloaded ?? (alloc as any).isOverloaded ?? false;
-            const details = (alloc as any).allocations ?? (alloc as any).details ?? [];
-
-            archSet.add(name);
-            dateSet.add(date);
-            grid.set(`${name}|${date}`, {
-                value: total,
-                overloaded,
-                details: details.map((d: any) => ({
-                    offerId: d.offer_id ?? d.offerId ?? "",
-                    role: d.role ?? "",
-                    weight: d.weight ?? 0,
+            archSet.add(alloc.architectName);
+            dateSet.add(alloc.date);
+            grid.set(`${alloc.architectName}|${alloc.date}`, {
+                value: alloc.totalAllocation,
+                overloaded: alloc.isOverloaded,
+                details: alloc.allocations.map((detail) => ({
+                    offerId: detail.offerId,
+                    role: detail.role,
+                    weight: detail.weight,
                 })),
             });
         }
@@ -81,6 +76,14 @@ export function AllocationHeatmap() {
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded" style={{ background: "var(--color-danger)", opacity: 0.9 }} /> &gt;90%</span>
                 </div>
             </div>
+
+            <DashboardInfo title="Understanding the Allocation Heatmap">
+                <p><strong>What it shows:</strong> A matrix of team members (rows) × weeks (columns) showing how heavily each person is allocated across active offers.</p>
+                <p><strong>Color coding:</strong> Each cell&apos;s color reflects the person&apos;s allocation intensity for that week. <strong>Green (≤30%)</strong> = light load, has capacity for more work. <strong>Yellow (≤60%)</strong> = moderate allocation. <strong>Orange (≤90%)</strong> = nearing full capacity. <strong>Red (&gt;90%)</strong> = overloaded — risk of burnout or quality issues.</p>
+                <p><strong>Hover for details:</strong> Hovering over any cell reveals the specific offers that person is assigned to that week, including their role and participation weight.</p>
+                <p><strong>How to use it:</strong> Scan for red hotspots — these indicate team members who are overcommitted and need offers reassigned. Look for consistently green rows — these people have capacity for new work. If an entire column is red, the team is over-committed that week and some offers may need deadline adjustments.</p>
+                <p><strong>Names:</strong> Team members are shown by their full names (mapped from Jira logins). External participants may still appear with their login if they are not in the team directory.</p>
+            </DashboardInfo>
 
             <div className="flex-1 w-full overflow-auto rounded border border-[var(--color-border)]">
                 <table className="w-full border-collapse text-xs">
@@ -142,7 +145,7 @@ export function AllocationHeatmap() {
                                                     </p>
                                                     {cell?.details && cell.details.length > 0 && (
                                                         <ul className="mt-1 space-y-0.5 border-t border-[var(--color-border)] pt-1">
-                                                            {cell.details.map((det, i) => (
+                                                            {cell.details.map((det: { offerId: string; role: string; weight: number }, i: number) => (
                                                                 <li key={i} className="flex justify-between">
                                                                     <span className="truncate mr-2">{det.offerId}</span>
                                                                     <span className="text-[var(--color-accent)] font-medium">{det.role} {(det.weight * 100).toFixed(0)}%</span>

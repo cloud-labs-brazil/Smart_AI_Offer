@@ -40,7 +40,11 @@ async def client(db_session: AsyncSession) -> AsyncClient:
             raise
 
     app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-User-Role": "SYSTEM_ADMIN"},
+    ) as async_client:
         yield async_client
     app.dependency_overrides.clear()
 
@@ -165,4 +169,3 @@ async def loaded_data(client: AsyncClient, sample_csv_bytes: bytes) -> dict:
     )
     assert response.status_code == 200
     return response.json()
-

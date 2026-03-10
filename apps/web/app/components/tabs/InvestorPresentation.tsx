@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { useOfferStore } from "../../stores/useOfferStore";
 import { TrendingUp, Users, Target, Globe2, Layers, Percent } from "lucide-react";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 const COLORS = [
     "var(--chart-0)", "var(--chart-1)", "var(--chart-2)",
@@ -14,28 +15,28 @@ const COLORS = [
 ];
 
 export function InvestorPresentation() {
-    const { offers, allocations, kpis, isLoading } = useOfferStore();
+    const { offers, allocations, isLoading } = useOfferStore();
 
     const metrics = useMemo(() => {
         if (!offers.length) return null;
 
-        const totalRev = offers.reduce((s, o: any) => s + (o.total_amount ?? o.totalAmount ?? 0), 0);
-        const avgMargin = offers.reduce((s, o: any) => s + (o.margin ?? 0), 0) / offers.length;
+        const totalRev = offers.reduce((sum, offer) => sum + (offer.totalAmount ?? 0), 0);
+        const avgMargin = offers.reduce((sum, offer) => sum + (offer.margin ?? 0), 0) / offers.length;
 
         // Practice diversification
-        const practices = new Set(offers.map((o: any) => o.practice).filter(Boolean));
+        const practices = new Set(offers.map((offer) => offer.practice).filter(Boolean));
 
         // Country spread
-        const countries = new Set(offers.map((o: any) => o.country).filter(Boolean));
+        const countries = new Set(offers.map((offer) => offer.country).filter(Boolean));
 
         // Active architects
-        const architects = new Set(allocations.map((a: any) => a.architect_name ?? a.architectName));
+        const architects = new Set(allocations.map((allocation) => allocation.architectName));
 
         // Weighted pipeline
-        const weightedPipeline = offers.reduce((s, o: any) => s + (o.weighted_amount ?? o.weightedAmount ?? 0), 0);
+        const weightedPipeline = offers.reduce((sum, offer) => sum + (offer.weightedAmount ?? 0), 0);
 
         // Renewal rate
-        const renewals = offers.filter((o: any) => o.renewal === true).length;
+        const renewals = offers.filter((offer) => offer.renewal === true).length;
         const renewalRate = offers.length > 0 ? (renewals / offers.length) * 100 : 0;
 
         // Radar data — normalize each dimension to 0–100
@@ -50,10 +51,10 @@ export function InvestorPresentation() {
 
         // Top countries bar data
         const countryMap = new Map<string, number>();
-        for (const o of offers) {
-            const c = (o as any).country ?? "Unknown";
-            const a = (o as any).total_amount ?? (o as any).totalAmount ?? 0;
-            countryMap.set(c, (countryMap.get(c) || 0) + a);
+        for (const offer of offers) {
+            const country = offer.country ?? "Unknown";
+            const amount = offer.totalAmount ?? 0;
+            countryMap.set(country, (countryMap.get(country) || 0) + amount);
         }
         const topCountries = Array.from(countryMap.entries())
             .map(([country, revenue]) => ({ country, revenue }))
@@ -65,7 +66,7 @@ export function InvestorPresentation() {
             countryCount: countries.size, architectCount: architects.size,
             weightedPipeline, renewalRate, radarData, topCountries,
         };
-    }, [offers, allocations, kpis]);
+    }, [offers, allocations]);
 
     if (isLoading) {
         return <div className="animate-pulse bg-[var(--color-bg)] rounded w-full h-full min-h-[400px]" />;
@@ -93,6 +94,14 @@ export function InvestorPresentation() {
             <h2 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-primary)]">
                 Investor Presentation — Executive Summary
             </h2>
+
+            <DashboardInfo title="Understanding the Executive Summary">
+                <p><strong>What it shows:</strong> A high-level executive view of the offer pipeline, designed for investor presentations and senior leadership reviews.</p>
+                <p><strong>KPI cards (top row):</strong> Six key performance indicators: Total Revenue (gross pipeline value), Average Margin (profitability health), number of Practices (service diversification), Countries (geographic reach), Architects (team size), and Weighted Pipeline (risk-adjusted revenue considering win probability).</p>
+                <p><strong>Scaling Score (radar chart):</strong> A hexagonal radar showing normalized scores (0–100) across six dimensions. A larger area means the organization scores well across all dimensions. Dents in the shape reveal specific areas needing improvement — e.g., a low &quot;Geo Spread&quot; score suggests the business is too geographically concentrated.</p>
+                <p><strong>Revenue by Country (bar chart):</strong> Shows the top 6 countries by total pipeline revenue. Useful for identifying geographic dependencies and growth opportunities.</p>
+                <p><strong>Renewal Rate (bottom bar):</strong> The percentage of offers that are renewals vs. net-new business. Higher renewal rates indicate strong client retention and predictable revenue.</p>
+            </DashboardInfo>
 
             {/* Summary KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -162,7 +171,7 @@ export function InvestorPresentation() {
                                     borderRadius: "var(--radius-card)",
                                     color: "var(--color-text)",
                                 }}
-                                formatter={(value: number) => [`€${(value / 1000000).toFixed(2)}M`, "Revenue"]}
+                                formatter={(value) => [`€${(Number(value) / 1000000).toFixed(2)}M`, "Revenue"]}
                             />
                             <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
                                 {metrics.topCountries.map((_, index) => (

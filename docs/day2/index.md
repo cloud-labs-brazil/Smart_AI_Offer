@@ -10,8 +10,10 @@ It contains everything you need to understand the architecture, validate system 
 |---|---|
 | 📦 **[Component Registry](./component-registry.md)** | Inventory of all microservices, backend packages, UI libraries, and database containers. |
 | 🏗️ **[Architecture & Data Flow](./architecture.md)** | Network topology, Mermaid architecture diagrams, and high-level data flow paths. |
+| 🧭 **[Architecture Solution](./architecture-solution.md)** | Documento arquitetural consolidado (fisico + logico + rede + stack/versionamento + melhoria continua). |
 | 🔌 **[Connectivity Matrix](./connectivity-matrix.md)** | Network ACL reference detailing which components communicate over which ports and protocols. |
 | 🛠️ **[Operational Runbook](./runbook.md)** | Step-by-step guides for starting/stopping services, running database migrations, uploading CSVs, and troubleshooting. |
+| 🚀 **[Deployment Runbook](./deployment-runbook.md)** | Production deployment, smoke validation, stress-test, and rollback procedures. |
 | 🔐 **[Environment Variables](./environment-variables.md)** | Complete reference of all configurable settings, feature flags, and secrets. |
 
 ---

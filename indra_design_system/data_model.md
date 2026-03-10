@@ -9,7 +9,7 @@
 | `summary` | string | Offer title / description |
 | `owner` | string | Primary responsible architect |
 | `participants` | string[] | Up to 14 additional participants |
-| `practice` | string | Business practice / DN |
+| `practice` | string | Business practice / DN (`Custom field (Type of Service)`) |
 | `value` | number | Financial value (BRL or USD) |
 | `startDate` | string | ISO-8601 start date |
 | `endDate` | string | ISO-8601 end date |

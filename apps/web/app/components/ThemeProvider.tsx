@@ -11,21 +11,18 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [currentTheme, setCurrentThemeState] = useState<ThemeTokens>(themes[DEFAULT_THEME]);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        // Read theme from localStorage securely on mount
-        const savedTheme = localStorage.getItem("rsa-theme");
-        if (savedTheme && themes[savedTheme]) {
-            setCurrentThemeState(themes[savedTheme]);
+    const [currentTheme, setCurrentThemeState] = useState<ThemeTokens>(() => {
+        if (typeof window === "undefined") {
+            return themes[DEFAULT_THEME];
         }
-        setMounted(true);
-    }, []);
+        const savedTheme = window.localStorage.getItem("rsa-theme");
+        if (savedTheme && themes[savedTheme]) {
+            return themes[savedTheme];
+        }
+        return themes[DEFAULT_THEME];
+    });
 
     useEffect(() => {
-        if (!mounted) return;
-
         // Persist and apply CSS variables when theme changes
         localStorage.setItem("rsa-theme", currentTheme.slug);
 
@@ -63,7 +60,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@${font.weightNormal};${font.weightBold}&display=swap`;
             document.head.appendChild(link);
         }
-    }, [currentTheme, mounted]);
+    }, [currentTheme]);
 
     const setTheme = (slug: string) => {
         if (themes[slug]) {
@@ -73,9 +70,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <ThemeContext.Provider value={{ currentTheme, setTheme }}>
-            <div style={{ visibility: mounted ? "visible" : "hidden", display: "contents" }}>
-                {children}
-            </div>
+            {children}
         </ThemeContext.Provider>
     );
 }

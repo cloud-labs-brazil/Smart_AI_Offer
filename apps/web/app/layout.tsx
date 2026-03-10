@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,12 @@ export default function RootLayout({
         <html lang="en" className="antialiased">
             <body>
                 <ThemeProvider>
-                    {children}
+                    <ErrorBoundary
+                        fallbackTitle="Smart Offer encountered an error"
+                        showDetails={process.env.NODE_ENV === "development"}
+                    >
+                        {children}
+                    </ErrorBoundary>
                 </ThemeProvider>
             </body>
         </html>

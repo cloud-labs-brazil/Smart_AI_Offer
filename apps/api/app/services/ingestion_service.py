@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+from services.ingestion.lineage import generate_correlation_id, hash_content  # noqa: E402
 from services.ingestion.normalizer import normalize_records  # noqa: E402
 from services.ingestion.parser import parse_csv_bytes  # noqa: E402
 
@@ -53,8 +55,20 @@ class IngestionService:
         self._allocation_service = allocation_service or AllocationService()
 
     async def ingest_csv(self, session: AsyncSession, content: bytes) -> dict[str, Any]:
+        # ING-007: SHA-256 integrity hash + correlation ID
+        file_hash = hash_content(content)
+        correlation_id = generate_correlation_id()
+
         records, errors = parse_csv_bytes(content)
-        normalized = normalize_records(records)
+
+        # Load login → full-name mappings from team_map.json
+        team_map_path = PROJECT_ROOT / "services" / "ingestion" / "team_map.json"
+        name_map: dict[str, str] | None = None
+        if team_map_path.exists():
+            with open(team_map_path, encoding="utf-8") as f:
+                name_map = json.load(f)
+
+        normalized = normalize_records(records, name_map=name_map)
 
         offer_rows: list[dict[str, Any]] = []
         participant_rows: list[dict[str, Any]] = []
@@ -124,6 +138,8 @@ class IngestionService:
                 "revenue_delta": 0.0,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
+            "sha256_hash": file_hash,
+            "correlation_id": correlation_id,
         }
 
     async def list_offers(

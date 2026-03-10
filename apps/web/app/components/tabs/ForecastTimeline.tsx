@@ -1,24 +1,60 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, ReferenceLine, Legend
 } from "recharts";
 import { useOfferStore } from "../../stores/useOfferStore";
+import { DashboardInfo } from "../ui/DashboardInfo";
+
+/** Compute rolling mean ± z*σ confidence bands */
+function addConfidenceBands(
+    data: Array<{ week: string; "New Offers": number; "Closing Offers": number }>,
+    window = 4,
+    z = 1.28 // 80% CI
+) {
+    return data.map((point, idx) => {
+        const windowSlice = data.slice(Math.max(0, idx - window + 1), idx + 1);
+
+        const newVals = windowSlice.map((d) => d["New Offers"]);
+        const closeVals = windowSlice.map((d) => d["Closing Offers"]);
+
+        const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+        const std = (arr: number[]) => {
+            const m = mean(arr);
+            return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
+        };
+
+        const newMean = mean(newVals);
+        const newStd = std(newVals);
+        const closeMean = mean(closeVals);
+        const closeStd = std(closeVals);
+
+        return {
+            ...point,
+            newUpper: Math.round((newMean + z * newStd) * 10) / 10,
+            newLower: Math.max(0, Math.round((newMean - z * newStd) * 10) / 10),
+            closeUpper: Math.round((closeMean + z * closeStd) * 10) / 10,
+            closeLower: Math.max(0, Math.round((closeMean - z * closeStd) * 10) / 10),
+            newTrend: Math.round(newMean * 10) / 10,
+            closeTrend: Math.round(closeMean * 10) / 10,
+        };
+    });
+}
 
 export function ForecastTimeline() {
     const { offers, isLoading } = useOfferStore();
+    const [showBands, setShowBands] = useState(true);
 
     const chartData = useMemo(() => {
         if (!offers.length) return [];
 
-        // Aggregate offers by week based on start_date
         const weekMap = new Map<string, { active: number; closing: number }>();
 
         for (const offer of offers) {
-            const sd = (offer as any).start_date ?? (offer as any).startDate;
-            const ed = (offer as any).end_date ?? (offer as any).endDate;
+            const sd = offer.startDate;
+            const ed = offer.endDate;
 
             if (sd) {
                 const d = new Date(sd);
@@ -41,14 +77,16 @@ export function ForecastTimeline() {
             }
         }
 
-        return Array.from(weekMap.entries())
+        const rawData = Array.from(weekMap.entries())
             .sort(([a], [b]) => a.localeCompare(b))
-            .slice(-16) // last 16 weeks
+            .slice(-16)
             .map(([week, counts]) => ({
                 week: new Date(week).toLocaleDateString("en", { month: "short", day: "numeric" }),
                 "New Offers": counts.active,
                 "Closing Offers": counts.closing,
             }));
+
+        return addConfidenceBands(rawData);
     }, [offers]);
 
     if (isLoading) {
@@ -65,9 +103,30 @@ export function ForecastTimeline() {
 
     return (
         <div className="flex flex-col h-full w-full">
-            <h2 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-primary)] mb-4">
-                Offer Forecast Timeline
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-primary)]">
+                    Offer Forecast Timeline
+                </h2>
+                <label className="inline-flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--color-muted)" }}>
+                    <input
+                        type="checkbox"
+                        checked={showBands}
+                        onChange={(e) => setShowBands(e.target.checked)}
+                        className="accent-[var(--color-accent)]"
+                    />
+                    Show 80% Confidence Bands
+                </label>
+            </div>
+
+            <DashboardInfo title="Understanding the Forecast Timeline">
+                <p><strong>What it shows:</strong> A week-by-week timeline of offer activity in your pipeline, displayed as two stacked areas over time.</p>
+                <p><strong>Blue area (New Offers):</strong> The number of new offers entering the pipeline each week (based on their start date). Rising peaks indicate periods of high demand or active business development.</p>
+                <p><strong>Orange area (Closing Offers):</strong> The number of offers reaching their end/close date each week. Peaks here indicate heavy delivery deadlines converging.</p>
+                <p><strong>Capacity line (dashed):</strong> The horizontal reference line shows the team&apos;s estimated weekly throughput. When the stacked areas rise above this line, the team may be overcommitted.</p>
+                <p><strong>Confidence Bands (shaded):</strong> The light shaded regions around each area represent the <em>80% confidence interval</em> based on a 4-week rolling average ± 1.28 standard deviations. If actual values fall <strong>outside</strong> the band, the week is more volatile than typical — this may indicate an anomaly or seasonal pattern requiring attention.</p>
+                <p><strong>How to use it:</strong> Look for &quot;bottleneck weeks&quot; where closing offers spike above capacity. Also watch for weeks where values break out of confidence bands — these outliers deserve investigation.</p>
+            </DashboardInfo>
+
             <div className="flex-1 w-full min-h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -94,6 +153,56 @@ export function ForecastTimeline() {
                         />
                         <Legend verticalAlign="top" height={36} />
                         <ReferenceLine y={10} label="Capacity" stroke="var(--color-danger)" strokeDasharray="3 3" />
+
+                        {/* 80% Confidence band for New Offers */}
+                        {showBands && (
+                            <Area
+                                type="monotone"
+                                dataKey="newUpper"
+                                stroke="none"
+                                fill="var(--color-accent)"
+                                fillOpacity={0.08}
+                                name="New CI Upper"
+                                legendType="none"
+                            />
+                        )}
+                        {showBands && (
+                            <Area
+                                type="monotone"
+                                dataKey="newLower"
+                                stroke="none"
+                                fill="var(--color-bg)"
+                                fillOpacity={0.6}
+                                name="New CI Lower"
+                                legendType="none"
+                            />
+                        )}
+
+                        {/* 80% Confidence band for Closing Offers */}
+                        {showBands && (
+                            <Area
+                                type="monotone"
+                                dataKey="closeUpper"
+                                stroke="none"
+                                fill="var(--chart-1)"
+                                fillOpacity={0.08}
+                                name="Close CI Upper"
+                                legendType="none"
+                            />
+                        )}
+                        {showBands && (
+                            <Area
+                                type="monotone"
+                                dataKey="closeLower"
+                                stroke="none"
+                                fill="var(--color-bg)"
+                                fillOpacity={0.6}
+                                name="Close CI Lower"
+                                legendType="none"
+                            />
+                        )}
+
+                        {/* Main data series */}
                         <Area
                             type="monotone"
                             dataKey="New Offers"
@@ -116,3 +225,4 @@ export function ForecastTimeline() {
         </div>
     );
 }
+

@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { UploadCloud, CheckCircle } from "lucide-react";
 import { useOfferStore } from "../../stores/useOfferStore";
+import { getErrorMessage } from "../../lib/apiMappers";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 export function AdminSettings() {
     const { uploadCsv, isLoading } = useOfferStore();
@@ -39,15 +41,21 @@ export function AdminSettings() {
         setUploadStatus("Uploading...");
         try {
             const result = await uploadCsv(file);
-            setUploadStatus(`Success: ${result.ingested_count || 0} offers ingested.`);
-        } catch (err: any) {
-            setUploadStatus(`Error: ${err.message}`);
+            setUploadStatus(`Success: ${result.ingestedCount || 0} offers ingested.`);
+        } catch (err: unknown) {
+            setUploadStatus(`Error: ${getErrorMessage(err)}`);
         }
     };
 
     return (
         <div className="flex flex-col h-full w-full max-w-2xl mx-auto">
-            <h2 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-primary)] mb-6">Admin & Settings</h2>
+            <div className="flex items-center gap-1.5 mb-6">
+                <h2 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-primary)]">Admin & Settings</h2>
+                <DashboardInfo title="Admin & Settings">
+                    <p><strong>Data Upload:</strong> Upload a Jira CSV export to refresh pipeline, allocation, and KPI datasets in one action.</p>
+                    <p><strong>Status Panel:</strong> Confirms active API endpoint and runtime configuration status for quick troubleshooting.</p>
+                </DashboardInfo>
+            </div>
 
             <div
                 className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors ${dragActive ? "border-[var(--color-accent)] bg-[var(--color-accent)]/5" : "border-[var(--color-border)] hover:border-[var(--color-primary)]"

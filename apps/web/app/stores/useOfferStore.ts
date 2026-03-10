@@ -1,24 +1,18 @@
 import { create } from "zustand";
 import type { JiraOffer, DailyAllocation } from "../types";
-
-interface KPIResponse {
-    total_offers: number;
-    total_revenue: number;
-    avg_margin: number;
-    overloaded_count: number;
-}
+import { getErrorMessage, mapAllocation, mapKpis, mapOffer, mapUploadResponse, type KpiResponse, type UploadCsvResponse } from "../lib/apiMappers";
 
 interface OfferStoreState {
     offers: JiraOffer[];
     allocations: DailyAllocation[];
-    kpis: KPIResponse | null;
+    kpis: KpiResponse | null;
     isLoading: boolean;
     error: string | null;
 
     fetchOffers: () => Promise<void>;
     fetchAllocations: () => Promise<void>;
     fetchKpis: () => Promise<void>;
-    uploadCsv: (file: File) => Promise<any>;
+    uploadCsv: (file: File) => Promise<UploadCsvResponse>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -36,9 +30,9 @@ export const useOfferStore = create<OfferStoreState>((set, get) => ({
             const res = await fetch(`${API_URL}/offers`);
             if (!res.ok) throw new Error("Failed to fetch offers");
             const data = await res.json();
-            set({ offers: data.items, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.message, isLoading: false });
+            set({ offers: (data.items ?? []).map(mapOffer), isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getErrorMessage(err), isLoading: false });
         }
     },
 
@@ -48,9 +42,9 @@ export const useOfferStore = create<OfferStoreState>((set, get) => ({
             const res = await fetch(`${API_URL}/allocations`);
             if (!res.ok) throw new Error("Failed to fetch allocations");
             const data = await res.json();
-            set({ allocations: data.items, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.message, isLoading: false });
+            set({ allocations: (data.items ?? []).map(mapAllocation), isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getErrorMessage(err), isLoading: false });
         }
     },
 
@@ -60,9 +54,9 @@ export const useOfferStore = create<OfferStoreState>((set, get) => ({
             const res = await fetch(`${API_URL}/kpis`);
             if (!res.ok) throw new Error("Failed to fetch KPIs");
             const data = await res.json();
-            set({ kpis: data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.message, isLoading: false });
+            set({ kpis: mapKpis(data), isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getErrorMessage(err), isLoading: false });
         }
     },
 
@@ -87,9 +81,9 @@ export const useOfferStore = create<OfferStoreState>((set, get) => ({
             ]);
 
             set({ isLoading: false });
-            return data;
-        } catch (err: any) {
-            set({ error: err.message, isLoading: false });
+            return mapUploadResponse(data);
+        } catch (err: unknown) {
+            set({ error: getErrorMessage(err), isLoading: false });
             throw err;
         }
     },

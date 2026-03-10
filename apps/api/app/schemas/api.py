@@ -34,6 +34,8 @@ class UploadResponse(BaseModel):
     error_count: int
     errors: list[UploadError] = Field(default_factory=list)
     discrepancy_report: DiscrepancyReport | None = None
+    sha256_hash: str | None = Field(default=None, description="SHA-256 integrity hash of the ingested CSV file")
+    correlation_id: str | None = Field(default=None, description="Unique correlation ID for this ingestion run")
 
 
 class OfferBase(BaseModel):
@@ -135,6 +137,33 @@ class KPIResponse(BaseModel):
     total_revenue: float
     avg_margin: float
     overloaded_count: int
+
+
+class ExplainabilitySourceRecord(BaseModel):
+    """Source record contributing to a metric value."""
+
+    source_id: str
+    source_type: Literal["offer", "daily_allocation"]
+    fields: dict[str, str | float | int | bool | None]
+    contribution: float | None = None
+
+
+class ExplainabilityItem(BaseModel):
+    """Explainability payload for one metric."""
+
+    metric_id: str
+    metric_label: str
+    formula: str
+    computed_value: float
+    total_source_records: int
+    sampled_records: list[ExplainabilitySourceRecord]
+
+
+class ExplainabilityResponse(BaseModel):
+    """Explainability response for one or multiple metrics."""
+
+    generated_at: datetime
+    items: list[ExplainabilityItem]
 
 
 class HealthResponse(BaseModel):

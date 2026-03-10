@@ -7,6 +7,7 @@ Actionable guides for operating and maintaining the Smart Offer platform in Day 
 - [2. Database Management & Migrations](#2-database-management--migrations)
 - [3. Application Data & State](#3-application-data--state)
 - [4. Troubleshooting & Logging](#4-troubleshooting--logging)
+- [5. Validation Scripts](#5-validation-scripts)
 
 ---
 
@@ -149,3 +150,23 @@ docker compose -f infra/docker-compose.yml logs -f db
   WEB_PORT=3001
   API_PORT=8001
   ```
+
+---
+
+## 5. Validation Scripts
+
+### E2E Smoke Test (QA-005)
+
+Runs a minimal end-to-end verification (web reachable, API healthy, upload works, offers/allocations visible):
+
+```bash
+python infra/scripts/e2e_smoke.py
+```
+
+### 50k Stress Test (ING-010)
+
+Generates a synthetic CSV and uploads it to validate ingestion throughput:
+
+```bash
+python apps/api/scripts/stress_50k.py --rows 50000 --api-url http://localhost:8000
+```

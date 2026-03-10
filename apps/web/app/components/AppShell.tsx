@@ -17,6 +17,7 @@ import { InternalBoard } from "./tabs/InternalBoard";
 import { AdminSettings } from "./tabs/AdminSettings";
 import { ScenarioSimulator } from "./simulator/ScenarioSimulator";
 import { RiskPanel } from "./simulator/RiskPanel";
+import { GeminiChatbot } from "./GeminiChatbot";
 
 const TABS = [
     { id: "heatmap", label: "Allocation Heatmap", component: AllocationHeatmap },
@@ -36,7 +37,7 @@ export function AppShell() {
         fetchOffers();
         fetchAllocations();
         fetchKpis();
-    }, []);
+    }, [fetchOffers, fetchAllocations, fetchKpis]);
 
     const ActiveComponent = TABS.find((t) => t.id === activeTab)?.component || AllocationHeatmap;
 
@@ -120,6 +121,9 @@ export function AppShell() {
                     <RiskPanel />
                 </aside>
             </div>
+
+            {/* Floating AI Chatbot */}
+            <GeminiChatbot activeTab={TABS.find(t => t.id === activeTab)?.label} />
         </div>
     );
 }

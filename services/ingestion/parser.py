@@ -14,10 +14,105 @@ import csv
 import io
 import re
 from datetime import datetime, timezone
+from enum import IntEnum
 from typing import Any
 
 CSV_COLUMN_COUNT = 52
-KNOWN_STATUSES = {"Under Study", "In Progress", "Won", "Lost", "Cancelled"}
+KNOWN_STATUSES = {
+    "Under Study",
+    "In Progress",
+    "On Offer",
+    "FollowUp",
+    "Won-End",
+    "Abandoned",
+    "Rejected",
+    "Won",
+    "Lost",
+    "Cancelled",
+}
+
+EXPECTED_HEADERS = [
+    "Issue key",
+    "Issue id",
+    "Assignee",
+    "Status",
+    "Summary",
+    "Custom field (Type of Service)",
+    "Component/s",
+    "Custom field (Offering Type)",
+    "Priority",
+    "Custom field (Total amount (€) weighted)",
+    "Custom field (Type Business Opportunity)",
+    "Custom field (Country)",
+    "Custom field (Market)",
+    "Custom field (Market Manager)",
+    "Custom field (DN Manager)",
+    "Custom field (Operations Manager)",
+    "Custom field (Renewal)",
+    "Custom field (Código GEP)",
+    "Custom field (Temporal Scope)",
+    "Custom field (Receipt of application)",
+    "Custom field (Delivery Commitment)",
+    *["Custom field (Participants)"] * 15,
+    "Custom field (Total Amount (euros))",
+    "Custom field (Budg.Loc.Currency)",
+    "Custom field (Margin)",
+    "Custom field (Offer Code (NG))",
+    "Custom field (Offer Description (NG))",
+    "Custom field (Transversal offer)",
+    "Updated",
+    "Created",
+    "Custom field (Proposal Due Date)",
+    "Custom field (Observations)",
+    "Resolved",
+    "Custom field (Cloud – Amount Infrastructure €)",
+    "Custom field (Cloud – Amount Services €)",
+    "Custom field (Type of Cloud Service)",
+    "Custom field (Cloud Provider)",
+    "Custom field (Others Cloud Providers)",
+]
+
+
+class CsvCol(IntEnum):
+    ISSUE_KEY = 0
+    ISSUE_ID = 1
+    ASSIGNEE = 2
+    STATUS = 3
+    SUMMARY = 4
+    TYPE_OF_SERVICE = 5
+    COMPONENT = 6
+    OFFERING_TYPE = 7
+    PRIORITY = 8
+    WEIGHTED_AMOUNT = 9
+    BUSINESS_OPPORTUNITY_TYPE = 10
+    COUNTRY = 11
+    MARKET = 12
+    MARKET_MANAGER = 13
+    DN_MANAGER = 14
+    OPERATIONS_MANAGER = 15
+    RENEWAL = 16
+    GEP_CODE = 17
+    TEMPORAL_SCOPE = 18
+    RECEIPT_OF_APPLICATION = 19
+    DELIVERY_COMMITMENT = 20
+    PARTICIPANTS_START = 21
+    PARTICIPANTS_END = 36
+    TOTAL_AMOUNT = 36
+    LOCAL_CURRENCY_BUDGET = 37
+    MARGIN = 38
+    OFFER_CODE_NG = 39
+    OFFER_DESCRIPTION_NG = 40
+    TRANSVERSAL_OFFER = 41
+    UPDATED = 42
+    CREATED = 43
+    PROPOSAL_DUE_DATE = 44
+    OBSERVATIONS = 45
+    RESOLVED = 46
+    CLOUD_INFRA_AMOUNT = 47
+    CLOUD_SERVICES_AMOUNT = 48
+    CLOUD_SERVICE_TYPE = 49
+    CLOUD_PROVIDER = 50
+    OTHER_CLOUD_PROVIDERS = 51
 
 
 def _clean_text(value: str | None) -> str | None:
@@ -85,7 +180,7 @@ def _parse_participants(row: list[str], assignee: str | None) -> list[str]:
     seen: set[str] = set()
     owner_key = (assignee or "").strip().lower()
 
-    for value in row[21:36]:
+    for value in row[CsvCol.PARTICIPANTS_START : CsvCol.PARTICIPANTS_END]:
         candidate = _clean_text(value)
         if candidate is None:
             continue
@@ -102,6 +197,33 @@ def _iso_to_datetime(value: str | None) -> datetime | None:
     if value is None:
         return None
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _validate_header(header: list[str]) -> dict[str, Any] | None:
+    if len(header) != CSV_COLUMN_COUNT:
+        return {
+            "row": 0,
+            "severity": "CRITICAL",
+            "field": "header",
+            "message": f"Expected {CSV_COLUMN_COUNT} columns, got {len(header)}",
+        }
+
+    mismatches: list[str] = []
+    for index, expected in enumerate(EXPECTED_HEADERS):
+        if (header[index] or "").strip() != expected:
+            mismatches.append(f"col {index + 1}: expected '{expected}', got '{header[index]}'")
+            if len(mismatches) >= 3:
+                break
+
+    if mismatches:
+        return {
+            "row": 0,
+            "severity": "CRITICAL",
+            "field": "header",
+            "message": "CSV header does not match Jira contract; " + "; ".join(mismatches),
+        }
+
+    return None
 
 
 def parse_csv_bytes(content: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -122,15 +244,9 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
     if header is None:
         return [], [{"row": 0, "severity": "CRITICAL", "field": "file", "message": "Empty CSV"}]
 
-    if len(header) != CSV_COLUMN_COUNT:
-        return [], [
-            {
-                "row": 0,
-                "severity": "CRITICAL",
-                "field": "header",
-                "message": f"Expected {CSV_COLUMN_COUNT} columns, got {len(header)}",
-            }
-        ]
+    header_error = _validate_header(header)
+    if header_error is not None:
+        return [], [header_error]
 
     for row_number, row in enumerate(reader, start=2):
         if len(row) != CSV_COLUMN_COUNT:
@@ -144,9 +260,9 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
             )
             continue
 
-        issue_key = _clean_text(row[0])
-        assignee = _clean_text(row[2])
-        created_at = _parse_date(row[43])
+        issue_key = _clean_text(row[CsvCol.ISSUE_KEY])
+        assignee = _clean_text(row[CsvCol.ASSIGNEE])
+        created_at = _parse_date(row[CsvCol.CREATED])
 
         if issue_key is None:
             errors.append(
@@ -181,7 +297,7 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
             )
             continue
 
-        status = _clean_text(row[3]) or "Unknown"
+        status = _clean_text(row[CsvCol.STATUS]) or "Unknown"
         if status not in KNOWN_STATUSES:
             errors.append(
                 {
@@ -192,18 +308,18 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
                 }
             )
 
-        start_date = _parse_date(row[19])
-        end_date = _parse_date(row[20])
-        updated_at = _parse_date(row[42])
-        proposal_due_date = _parse_date(row[44])
-        resolved_at = _parse_date(row[46])
+        start_date = _parse_date(row[CsvCol.RECEIPT_OF_APPLICATION])
+        end_date = _parse_date(row[CsvCol.DELIVERY_COMMITMENT])
+        updated_at = _parse_date(row[CsvCol.UPDATED])
+        proposal_due_date = _parse_date(row[CsvCol.PROPOSAL_DUE_DATE])
+        resolved_at = _parse_date(row[CsvCol.RESOLVED])
 
         for field_name, raw_value in (
-            ("Receipt of application", row[19]),
-            ("Delivery Commitment", row[20]),
-            ("Updated", row[42]),
-            ("Proposal Due Date", row[44]),
-            ("Resolved", row[46]),
+            ("Receipt of application", row[CsvCol.RECEIPT_OF_APPLICATION]),
+            ("Delivery Commitment", row[CsvCol.DELIVERY_COMMITMENT]),
+            ("Updated", row[CsvCol.UPDATED]),
+            ("Proposal Due Date", row[CsvCol.PROPOSAL_DUE_DATE]),
+            ("Resolved", row[CsvCol.RESOLVED]),
         ):
             if _clean_text(raw_value) and _parse_date(raw_value) is None:
                 errors.append(
@@ -225,12 +341,12 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
                 }
             )
 
-        weighted_amount = _parse_number(row[9])
-        total_amount = _parse_number(row[36])
-        local_currency_budget = _parse_number(row[37])
-        margin = _parse_number(row[38])
-        cloud_infra_amount = _parse_number(row[47])
-        cloud_services_amount = _parse_number(row[48])
+        weighted_amount = _parse_number(row[CsvCol.WEIGHTED_AMOUNT])
+        total_amount = _parse_number(row[CsvCol.TOTAL_AMOUNT])
+        local_currency_budget = _parse_number(row[CsvCol.LOCAL_CURRENCY_BUDGET])
+        margin = _parse_number(row[CsvCol.MARGIN])
+        cloud_infra_amount = _parse_number(row[CsvCol.CLOUD_INFRA_AMOUNT])
+        cloud_services_amount = _parse_number(row[CsvCol.CLOUD_SERVICES_AMOUNT])
 
         for field_name, value in (
             ("weightedAmount", weighted_amount),
@@ -251,43 +367,43 @@ def parse_csv_text(content: str) -> tuple[list[dict[str, Any]], list[dict[str, A
 
         record: dict[str, Any] = {
             "id": issue_key,
-            "jira_id": int(_parse_number(row[1]) or 0),
+            "jira_id": int(_parse_number(row[CsvCol.ISSUE_ID]) or 0),
             "owner": assignee,
             "status": status,
-            "summary": _clean_text(row[4]) or "",
-            "type_of_service": _clean_text(row[5]),
-            "practice": _clean_text(row[6]),
-            "offering_type": _clean_text(row[7]),
-            "priority": _clean_text(row[8]),
+            "summary": _clean_text(row[CsvCol.SUMMARY]) or "",
+            "type_of_service": _clean_text(row[CsvCol.TYPE_OF_SERVICE]),
+            "practice": _clean_text(row[CsvCol.TYPE_OF_SERVICE]),
+            "offering_type": _clean_text(row[CsvCol.OFFERING_TYPE]),
+            "priority": _clean_text(row[CsvCol.PRIORITY]),
             "weighted_amount": weighted_amount,
-            "business_opportunity_type": _clean_text(row[10]),
-            "country": _clean_text(row[11]),
-            "market": _clean_text(row[12]),
-            "market_manager": _clean_text(row[13]),
-            "dn_manager": _clean_text(row[14]) or "",
-            "operations_manager": _clean_text(row[15]),
-            "renewal": _parse_bool(row[16]),
-            "gep_code": _clean_text(row[17]),
-            "temporal_scope": _clean_text(row[18]),
+            "business_opportunity_type": _clean_text(row[CsvCol.BUSINESS_OPPORTUNITY_TYPE]),
+            "country": _clean_text(row[CsvCol.COUNTRY]),
+            "market": _clean_text(row[CsvCol.MARKET]),
+            "market_manager": _clean_text(row[CsvCol.MARKET_MANAGER]),
+            "dn_manager": _clean_text(row[CsvCol.DN_MANAGER]) or "",
+            "operations_manager": _clean_text(row[CsvCol.OPERATIONS_MANAGER]),
+            "renewal": _parse_bool(row[CsvCol.RENEWAL]),
+            "gep_code": _clean_text(row[CsvCol.GEP_CODE]),
+            "temporal_scope": _clean_text(row[CsvCol.TEMPORAL_SCOPE]),
             "start_date": start_date,
             "end_date": end_date,
             "participants": _parse_participants(row, assignee),
             "total_amount": total_amount,
             "local_currency_budget": local_currency_budget,
             "margin": margin,
-            "offer_code_ng": _clean_text(row[39]),
-            "offer_description_ng": _clean_text(row[40]),
-            "transversal": _parse_bool(row[41]),
+            "offer_code_ng": _clean_text(row[CsvCol.OFFER_CODE_NG]),
+            "offer_description_ng": _clean_text(row[CsvCol.OFFER_DESCRIPTION_NG]),
+            "transversal": _parse_bool(row[CsvCol.TRANSVERSAL_OFFER]),
             "updated_at": updated_at,
             "created_at": created_at,
             "proposal_due_date": proposal_due_date,
-            "observations": _clean_text(row[45]),
+            "observations": _clean_text(row[CsvCol.OBSERVATIONS]),
             "resolved_at": resolved_at,
             "cloud_infra_amount": cloud_infra_amount,
             "cloud_services_amount": cloud_services_amount,
-            "cloud_service_type": _clean_text(row[49]),
-            "cloud_provider": _clean_text(row[50]),
-            "other_cloud_providers": _clean_text(row[51]),
+            "cloud_service_type": _clean_text(row[CsvCol.CLOUD_SERVICE_TYPE]),
+            "cloud_provider": _clean_text(row[CsvCol.CLOUD_PROVIDER]),
+            "other_cloud_providers": _clean_text(row[CsvCol.OTHER_CLOUD_PROVIDERS]),
         }
 
         previous = dedup.get(issue_key)

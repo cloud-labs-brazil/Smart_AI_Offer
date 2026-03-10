@@ -5,6 +5,8 @@ import { Users, TrendingUp, Percent, AlertTriangle } from "lucide-react";
 import { motion, useSpring, useTransform } from "motion/react";
 import { useOfferStore } from "../stores/useOfferStore";
 
+import { DashboardInfo } from "./ui/DashboardInfo";
+
 const AnimatedCounter = ({ value, prefix = "", suffix = "", decimals = 0 }: { value: number; prefix?: string; suffix?: string; decimals?: number }) => {
     const spring = useSpring(0, { bounce: 0, duration: 800 });
     const display = useTransform(spring, (current) => {
@@ -34,38 +36,42 @@ export function ExecutiveKPIStrip() {
         );
     }
 
-    const { total_offers = 0, total_revenue = 0, avg_margin = 0, overloaded_count = 0 } = kpis || {};
+    const { totalOffers = 0, totalRevenue = 0, avgMargin = 0, overloadedCount = 0 } = kpis || {};
 
     const cards = [
         {
             title: "Active Offers",
-            value: total_offers,
+            value: totalOffers,
             icon: Users,
             color: "var(--color-accent)",
+            description: "The total number of ongoing commercial opportunities currently tracked in the system.",
         },
         {
             title: "Total Target Revenue",
-            value: total_revenue,
+            value: totalRevenue,
             prefix: "€",
             suffix: "M",
             decimals: 1,
             icon: TrendingUp,
             color: "var(--color-success)",
+            description: "The sum of all target revenue across all active pipeline offers.",
         },
         {
             title: "Average Margin",
-            value: avg_margin,
+            value: avgMargin,
             suffix: "%",
             decimals: 1,
             icon: Percent,
             color: "var(--color-warning)",
+            description: "The calculated average profit margin across the entire active portfolio.",
         },
         {
             title: "Overloaded Architects",
-            value: overloaded_count,
+            value: overloadedCount,
             icon: AlertTriangle,
-            color: overloaded_count > 0 ? "var(--color-danger)" : "var(--color-muted)",
-            isAlert: overloaded_count > 0,
+            color: overloadedCount > 0 ? "var(--color-danger)" : "var(--color-muted)",
+            isAlert: overloadedCount > 0,
+            description: "The number of Solution Architects currently allocated beyond 100% capacity.",
         },
     ];
 
@@ -81,7 +87,16 @@ export function ExecutiveKPIStrip() {
                         } rounded-xl p-[var(--card-padding)] shadow-[var(--shadow-card)]`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-[var(--color-muted)]">{card.title}</h3>
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-medium text-[var(--color-muted)]">{card.title}</h3>
+                            <DashboardInfo title={card.title}>
+                                <div className="space-y-2">
+                                    <p className="text-xs text-[var(--color-text)] leading-relaxed">
+                                        {card.description}
+                                    </p>
+                                </div>
+                            </DashboardInfo>
+                        </div>
                         <card.icon className="w-5 h-5" style={{ color: card.color }} />
                     </div>
                     <div className="text-3xl font-[var(--font-weight-bold)] text-[var(--color-text)]">

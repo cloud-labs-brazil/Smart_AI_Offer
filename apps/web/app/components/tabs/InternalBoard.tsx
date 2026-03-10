@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useOfferStore } from "../../stores/useOfferStore";
 import { ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 type SortKey = "id" | "owner" | "practice" | "totalAmount" | "margin" | "status" | "participantCount";
 
@@ -17,26 +18,26 @@ export function InternalBoard() {
         // Count how many unique architects each offer involves
         const offerArchitectMap = new Map<string, Set<string>>();
         for (const alloc of allocations) {
-            const details = (alloc as any).allocations ?? (alloc as any).details ?? [];
+            const details = alloc.allocations;
             for (const det of details) {
-                const offerId = det.offer_id ?? det.offerId ?? "";
-                const archName = (alloc as any).architect_name ?? (alloc as any).architectName ?? "";
+                const offerId = det.offerId;
+                const archName = alloc.architectName;
                 if (!offerArchitectMap.has(offerId)) offerArchitectMap.set(offerId, new Set());
                 offerArchitectMap.get(offerId)!.add(archName);
             }
         }
 
-        return offers.map((offer: any) => ({
-            id: offer.id ?? offer.jira_key ?? "",
-            owner: offer.owner ?? offer.lead_architect ?? "",
+        return offers.map((offer) => ({
+            id: offer.id,
+            owner: offer.owner,
             practice: offer.practice ?? "—",
             status: offer.status ?? "—",
-            totalAmount: offer.total_amount ?? offer.totalAmount ?? 0,
+            totalAmount: offer.totalAmount ?? 0,
             margin: offer.margin ?? 0,
             participantCount: (offer.participants ?? []).length,
-            architectCount: offerArchitectMap.get(offer.id ?? offer.jira_key ?? "")?.size ?? 0,
-            startDate: offer.start_date ?? offer.startDate ?? null,
-            endDate: offer.end_date ?? offer.endDate ?? null,
+            architectCount: offerArchitectMap.get(offer.id)?.size ?? 0,
+            startDate: offer.startDate ?? null,
+            endDate: offer.endDate ?? null,
         }));
     }, [offers, allocations]);
 
@@ -74,8 +75,9 @@ export function InternalBoard() {
         );
     }
 
-    const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
+    const renderSortHeader = (label: string, field: SortKey) => (
         <th
+            key={field}
             className="px-3 py-2.5 text-left text-[var(--color-muted)] font-medium text-xs uppercase tracking-wider cursor-pointer hover:text-[var(--color-primary)] transition-colors select-none"
             onClick={() => toggleSort(field)}
         >
@@ -97,17 +99,25 @@ export function InternalBoard() {
                 </span>
             </div>
 
+            <DashboardInfo title="Understanding the Internal Board">
+                <p><strong>What it shows:</strong> A sortable table listing every offer in the pipeline with key metrics: owner, practice area, status, revenue, margin, team size, and timeline.</p>
+                <p><strong>Sorting:</strong> Click any column header to sort by that field. Click again to reverse the order. The active sort column is highlighted with a bold arrow icon.</p>
+                <p><strong>Margin colors:</strong> Green (&ge;20%) = healthy margin. Orange (10–20%) = acceptable but watch closely. Red (&lt;10%) = below target — needs attention before approval.</p>
+                <p><strong>Status icons:</strong> A green checkmark (✓) indicates won/closed offers. A yellow triangle (⚠) flags offers at risk that need escalation.</p>
+                <p><strong>How to use it:</strong> Use this table for governance reviews. Sort by revenue to prioritize high-value offers, or by margin to spot low-profitability deals early. The team count helps assess resource allocation — offers with many architects may need coordination attention.</p>
+            </DashboardInfo>
+
             <div className="flex-1 w-full overflow-auto rounded-lg border border-[var(--color-border)]">
                 <table className="w-full text-sm">
                     <thead className="bg-[var(--color-bg)] sticky top-0 z-10">
                         <tr className="border-b border-[var(--color-border)]">
-                            <SortHeader label="Offer ID" field="id" />
-                            <SortHeader label="Owner" field="owner" />
-                            <SortHeader label="Practice" field="practice" />
-                            <SortHeader label="Status" field="status" />
-                            <SortHeader label="Revenue" field="totalAmount" />
-                            <SortHeader label="Margin" field="margin" />
-                            <SortHeader label="Team" field="participantCount" />
+                            {renderSortHeader("Offer ID", "id")}
+                            {renderSortHeader("Owner", "owner")}
+                            {renderSortHeader("Practice", "practice")}
+                            {renderSortHeader("Status", "status")}
+                            {renderSortHeader("Revenue", "totalAmount")}
+                            {renderSortHeader("Margin", "margin")}
+                            {renderSortHeader("Team", "participantCount")}
                             <th className="px-3 py-2.5 text-left text-[var(--color-muted)] font-medium text-xs uppercase tracking-wider">Dates</th>
                         </tr>
                     </thead>

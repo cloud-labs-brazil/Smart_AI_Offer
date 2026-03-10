@@ -45,6 +45,8 @@ Each ADR follows this structure:
 | ADR-007 | 5-theme CSS variable system with localStorage | Proposed | 2026-03-09 |
 | ADR-008 | Docker Compose 3-service orchestration | Proposed | 2026-03-09 |
 | ADR-009 | Gemini AI integration for chatbot | Proposed | 2026-03-09 |
+| ADR-010 | Premium dark-mode dashboard UI overhaul | Accepted | 2026-03-09 |
+| ADR-011 | Zustand normalization + simulation state strategy | Accepted | 2026-03-09 |
 
 ## Conventions
 

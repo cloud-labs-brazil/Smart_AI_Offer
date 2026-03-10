@@ -23,7 +23,7 @@ export interface JiraOffer {
     summary: string;
     /** Service classification */
     typeOfService: string | null;
-    /** Business practice / DN (from Component/s) */
+    /** Business practice / DN (from Jira "Custom field (Type of Service)") */
     practice: string | null;
     /** Offering classification */
     offeringType: string | null;

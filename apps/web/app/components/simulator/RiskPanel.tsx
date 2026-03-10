@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { useOfferStore } from "../../stores/useOfferStore";
+import { DashboardInfo } from "../ui/DashboardInfo";
 
 interface RiskItem {
     severity: "critical" | "warning" | "info";
@@ -17,13 +18,10 @@ export function RiskPanel() {
         const items: RiskItem[] = [];
 
         // 1. Overloaded architects
-        const overloaded = allocations.filter((a: any) => {
-            const total = a.total_allocation ?? a.totalAllocation ?? 0;
-            return total > 1.0;
-        });
+        const overloaded = allocations.filter((allocation) => allocation.totalAllocation > 1.0);
         if (overloaded.length > 0) {
             const names = overloaded
-                .map((a: any) => a.architect_name ?? a.architectName)
+                .map((allocation) => allocation.architectName)
                 .filter((v, i, arr) => arr.indexOf(v) === i)
                 .slice(0, 3);
             items.push({
@@ -36,8 +34,8 @@ export function RiskPanel() {
         // 2. Offers expiring within 30 days
         const now = new Date();
         const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        const expiring = offers.filter((o: any) => {
-            const ed = o.end_date ?? o.endDate;
+        const expiring = offers.filter((offer) => {
+            const ed = offer.endDate;
             if (!ed) return false;
             const endDate = new Date(ed);
             return endDate > now && endDate <= thirtyDays;
@@ -53,11 +51,11 @@ export function RiskPanel() {
         // 3. High concentration risk (HHI)
         const practiceRev = new Map<string, number>();
         let grandTotal = 0;
-        for (const o of offers) {
-            const p = (o as any).practice ?? "Unknown";
-            const a = (o as any).total_amount ?? (o as any).totalAmount ?? 0;
-            practiceRev.set(p, (practiceRev.get(p) || 0) + a);
-            grandTotal += a;
+        for (const offer of offers) {
+            const practice = offer.practice ?? "Unknown";
+            const amount = offer.totalAmount ?? 0;
+            practiceRev.set(practice, (practiceRev.get(practice) || 0) + amount);
+            grandTotal += amount;
         }
         if (grandTotal > 0) {
             let hhi = 0;
@@ -75,7 +73,7 @@ export function RiskPanel() {
         }
 
         // 4. Low-margin offers
-        const lowMargin = offers.filter((o: any) => (o.margin ?? 0) < 10 && (o.margin ?? 0) > 0);
+        const lowMargin = offers.filter((offer) => (offer.margin ?? 0) < 10 && (offer.margin ?? 0) > 0);
         if (lowMargin.length > 0) {
             items.push({
                 severity: "info",
@@ -97,9 +95,21 @@ export function RiskPanel() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-[var(--shadow-card)] flex flex-col p-4">
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--color-border)]">
                 <ShieldAlert className="w-4 h-4 text-[var(--color-warning)]" />
-                <h2 className="text-sm font-[var(--font-weight-bold)] text-[var(--color-primary)]">
-                    Risk Factors
-                </h2>
+                <div className="flex items-center gap-1.5">
+                    <h2 className="text-sm font-[var(--font-weight-bold)] text-[var(--color-primary)]">
+                        Risk Factors
+                    </h2>
+                    <DashboardInfo title="Risk Factors">
+                        <div className="space-y-2">
+                            <p className="text-xs text-[var(--color-text)] leading-relaxed">
+                                Highlights critical active risks in your commercial portfolio, such as overloaded solution architects, imminent expiring offers, high revenue concentration, and low-margin deals.
+                            </p>
+                            <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+                                Focus attention here to proactively mitigate compliance, pricing, or resourcing risks.
+                            </p>
+                        </div>
+                    </DashboardInfo>
+                </div>
                 {risks.length > 0 && (
                     <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-danger)] text-white font-medium">
                         {risks.length}

@@ -14,7 +14,8 @@
 | **Operations Manager** | The operations lead. Maps to `Custom field (Operations Manager)`. |
 | **Market Manager** | The market-level manager. Maps to `Custom field (Market Manager)`. |
 | **Participant** | A secondary contributor to an offer. Up to 15 participants per offer, stored in repeated `Custom field (Participants)` columns. |
-| **Practice / DN** | The business practice or directorate. Derived from `Component/s` field. |
+| **Practice / DN** | The business practice or directorate. Derived from `Custom field (Type of Service)`. |
+| **Component** | Client/account label from Jira `Component/s` field. |
 | **Market** | The market vertical (Energy, Transport, PA, ICT, Defence, Telecom, Finance, Health). Maps to `Custom field (Market)`. |
 | **Country** | The geographic market. Maps to `Custom field (Country)`. |
 | **Allocation** | The computed daily workload percentage for an architect across all active offers. |
